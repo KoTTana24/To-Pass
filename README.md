@@ -34,7 +34,7 @@
 ## vault.txt   -  Encrypted service passwords
 ## config.txt  -   Selected interface language
 
-### The characters used to generate passwords by default are “abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+<>?”
+### The characters used to generate passwords by default are “abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+<>?” and you can also use Cyrilic: "абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
 
 
 
@@ -54,4 +54,4 @@
 ## vault.txt - Зашифрованные пароли сервисов
 ## config.txt	- Выбранный язык интерфейса
 
-### Символы которые используются для генерации паролей по умолчанию - "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+<>?"
+### Символы которые используются для генерации паролей по умолчанию - "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+<>?" так же вы можете использовать Кирилицу: "абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
