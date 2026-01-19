@@ -4,8 +4,8 @@
 ### To Pass - Console Password Manager
 
 ## Stable work on Linux
-## Maybe work on Windows
-## Maybe work on MacOs
+## Stable work on Windows
+## Stable work on MacOs
 
 
 # A little bit about how it works / Немного о том как он работает
