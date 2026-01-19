@@ -241,14 +241,19 @@ class PasswordManager
 
     // ================= PASSWORD =================
 
-    static string GeneratePassword(int length)
+    static string GeneratePassword(int length, bool useCyrillic)
     {
-        const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+<>?";
+        string latinChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+<>?";
+        string cyrillicChars = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя" +
+                                "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+
+        string allChars = useCyrillic ? latinChars + cyrillicChars : latinChars;
+
         Random rnd = new Random();
         StringBuilder pass = new StringBuilder();
 
         for (int i = 0; i < length; i++)
-            pass.Append(chars[rnd.Next(chars.Length)]);
+            pass.Append(allChars[rnd.Next(allChars.Length)]);
 
         return pass.ToString();
     }
@@ -274,7 +279,11 @@ class PasswordManager
             return;
         }
 
-        string password = GeneratePassword(length);
+        Console.Write(T("Использовать кириллицу? (y/n): ", "Use Cyrillic? (y/n): "));
+        string choice = Console.ReadLine()?.ToLower() ?? "n";
+        bool useCyrillic = choice == "y" || choice == "д";
+
+        string password = GeneratePassword(length, useCyrillic);
         vault[service] = EncryptAES(password, passwordKey);
         SaveVault();
 
@@ -301,12 +310,15 @@ class PasswordManager
 
     static void Main()
     {
+        // Загружаем язык при запуске программы
+        LoadLanguage();
+
         while (true)
         {
             Console.WriteLine("Менеджер паролей / Password Manager");
-            Console.WriteLine("1. " + T("Create account/Создать аккаунт", "Create account"));
-            Console.WriteLine("2. " + T("Login/Войти в аккаунт", "Login"));
-            Console.WriteLine("3. " + T("Exit/Выход", "Exit"));
+            Console.WriteLine("1. " + T("Создать аккаунт", "Create account"));
+            Console.WriteLine("2. " + T("Войти в аккаунт", "Login"));
+            Console.WriteLine("3. " + T("Выход", "Exit"));
             Console.Write(T("Выбор: ", "Choice: "));
 
             string choice = Console.ReadLine() ?? "";
@@ -339,8 +351,5 @@ class PasswordManager
             }
             else if (choice == "3") return;
         }
-    }
-}
-
     }
 }
