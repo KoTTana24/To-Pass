@@ -3,11 +3,11 @@
 
 ### To Pass - Console Password Manager
 
-## Stable work on Linux
-## Stable work on Windows
-## Stable work on MacOs
+## Stable work on Linux 🐧
+## Stable work on Windows 🪟
+## Stable work on MacOs 🍎
 
-# About Accounts
+# About Accounts 
 
 ### You can register accounts and add master password to account.
 
@@ -19,7 +19,7 @@
 # A little bit about how it works / Немного о том как он работает
 
 
-## EN
+## EN🇬🇧
 
 ## Accounts are stored in the users directory at the path 
 ## users/‘YOUR_ACCOUNT_NAME’
@@ -39,7 +39,7 @@
 
 
 
-## RU
+## RU🇷🇺
 
 ## Аккаунты хранятся в директории users по пути 
 ## users/'YOUR_ACCOUNT_NAME'
