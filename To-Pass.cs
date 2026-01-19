@@ -7,17 +7,15 @@ using System.Text;
 class PasswordManager
 {
     // ================= FILES =================
-    static string vaultFile = "vault.txt";
     static string configFile = "config.txt";
-    static string masterFile = "master.cfg";
+    static string userFilePath = "users/";
 
-    // ================= KEYS =================
     static string masterKey = "MASTER-KEY-CHANGE-THIS";
     static string passwordKey = "PASSWORD-KEY-CHANGE-THIS";
 
-    // ================= DATA =================
     static Dictionary<string, string> vault = new Dictionary<string, string>();
     static string language = "RU";
+    static string currentUser = "";
 
     // ================= CRYPTO CORE =================
 
@@ -129,13 +127,22 @@ class PasswordManager
         return language == "RU" ? ru : en;
     }
 
-    // ================= MASTER PASSWORD =================
+    // ================= USER MANAGEMENT =================
 
-    static void SetupMasterPassword()
+    static void CreateAccount()
     {
-        Console.WriteLine("\n=== CREATE MASTER PASSWORD ===");
-        Console.WriteLine("Создайте мастер-пароль / Create master password:");
+        Console.WriteLine("\n=== CREATE NEW USER ===");
+        Console.WriteLine("Введите имя пользователя / Enter username:");
 
+        string userName = Console.ReadLine() ?? "";
+
+        if (string.IsNullOrEmpty(userName))
+        {
+            Console.WriteLine("Имя пользователя не может быть пустым!");
+            return;
+        }
+
+        Console.WriteLine("Создайте мастер-пароль / Create master password:");
         string pass1 = ReadHidden();
         Console.WriteLine("Повторите пароль / Repeat password:");
         string pass2 = ReadHidden();
@@ -143,37 +150,93 @@ class PasswordManager
         if (pass1 != pass2 || pass1.Length < 4)
         {
             Console.WriteLine("Пароли не совпадают или слишком короткие!");
-            SetupMasterPassword();
             return;
         }
 
         string hashed = Hash(pass1);
         string encryptedHash = EncryptAES(hashed, masterKey);
 
-        File.WriteAllText(masterFile, encryptedHash);
-        Console.WriteLine("Мастер-пароль сохранён и защищён!");
+        // Create user folder and save encrypted master password
+        string userPath = Path.Combine(userFilePath, userName);
+        Directory.CreateDirectory(userPath);
+        File.WriteAllText(Path.Combine(userPath, "master.cfg"), encryptedHash);
+
+        Console.WriteLine("Пользователь создан и мастер-пароль сохранён!");
     }
 
-    static bool CheckMasterPassword()
+    static bool Login()
     {
-        try
+        Console.WriteLine("\n=== LOGIN ===");
+        Console.WriteLine("Введите имя пользователя / Enter username:");
+        string userName = Console.ReadLine() ?? "";
+
+        string userPath = Path.Combine(userFilePath, userName);
+
+        if (!Directory.Exists(userPath))
         {
-            string encryptedHash = File.ReadAllText(masterFile);
-            string storedHash = DecryptAES(encryptedHash, masterKey);
-
-            Console.WriteLine("\nВведите мастер-пароль / Enter master password:");
-            string input = ReadHidden();
-
-            return Hash(input) == storedHash;
+            Console.WriteLine("Пользователь не найден!");
+            return false;
         }
-        catch
+
+        Console.WriteLine("Введите мастер-пароль / Enter master password:");
+        string inputPassword = ReadHidden();
+
+        string encryptedHash = File.ReadAllText(Path.Combine(userPath, "master.cfg"));
+        string storedHash = DecryptAES(encryptedHash, masterKey);
+
+        if (Hash(inputPassword) == storedHash)
         {
-            Console.WriteLine("\nФайл мастер-пароля повреждён!");
-            Console.WriteLine("Master file corrupted!");
-            File.Delete(masterFile);
-            SetupMasterPassword();
+            currentUser = userName;
+            LoadVault();
+            Console.WriteLine($"Вход в аккаунт {currentUser} успешен!");
             return true;
         }
+
+        Console.WriteLine("Неверный мастер-пароль!");
+        return false;
+    }
+
+    // ================= STORAGE =================
+
+    static void LoadVault()
+    {
+        vault.Clear();
+        string userPath = Path.Combine(userFilePath, currentUser);
+
+        if (!Directory.Exists(userPath))
+            return;
+
+        string vaultFile = Path.Combine(userPath, "vault.txt");
+        if (!File.Exists(vaultFile))
+            return;
+
+        string[] lines = File.ReadAllLines(vaultFile);
+        string service = "";
+
+        foreach (string line in lines)
+        {
+            if (line.StartsWith("SERVICE:"))
+                service = line.Replace("SERVICE:", "");
+            else if (line.StartsWith("PASSWORD:"))
+                vault[service] = line.Replace("PASSWORD:", "");
+        }
+    }
+
+    static void SaveVault()
+    {
+        string userPath = Path.Combine(userFilePath, currentUser);
+        string vaultFile = Path.Combine(userPath, "vault.txt");
+
+        StringBuilder data = new StringBuilder();
+
+        foreach (var entry in vault)
+        {
+            data.AppendLine("SERVICE:" + entry.Key);
+            data.AppendLine("PASSWORD:" + entry.Value);
+            data.AppendLine("---");
+        }
+
+        File.WriteAllText(vaultFile, data.ToString());
     }
 
     // ================= PASSWORD =================
@@ -190,39 +253,6 @@ class PasswordManager
         return pass.ToString();
     }
 
-    // ================= STORAGE =================
-
-    static void SaveVault()
-    {
-        StringBuilder data = new StringBuilder();
-
-        foreach (var entry in vault)
-        {
-            data.AppendLine("SERVICE:" + entry.Key);
-            data.AppendLine("PASSWORD:" + entry.Value);
-            data.AppendLine("---");
-        }
-
-        File.WriteAllText(vaultFile, data.ToString());
-    }
-
-    static void LoadVault()
-    {
-        if (!File.Exists(vaultFile))
-            return;
-
-        string[] lines = File.ReadAllLines(vaultFile);
-        string service = "";
-
-        foreach (string line in lines)
-        {
-            if (line.StartsWith("SERVICE:"))
-                service = line.Replace("SERVICE:", "");
-            else if (line.StartsWith("PASSWORD:"))
-                vault[service] = line.Replace("PASSWORD:", "");
-        }
-    }
-
     // ================= GITHUB LINK =================
 
     static void ShowGitHubLink()
@@ -237,7 +267,7 @@ class PasswordManager
         Console.Write(T("Введите сервис: ", "Enter service: "));
         string service = Console.ReadLine() ?? "";
 
-        Console.Write(T("Введите длину пароля: ", "Enter password length: "));
+        Console.Write(T("Введите длину пароля(Рекамендовано минимум 12 символов для безопасности): ", "Enter password length(A minimum of 12 characters is recommended for security): "));
         if (!int.TryParse(Console.ReadLine(), out int length) || length < 4)
         {
             Console.WriteLine(T("Некорректная длина!", "Invalid length!"));
@@ -271,35 +301,43 @@ class PasswordManager
 
     static void Main()
     {
-        if (!File.Exists(masterFile))
-            SetupMasterPassword();
-        else if (!CheckMasterPassword())
-        {
-            Console.WriteLine("Доступ запрещён / Access denied");
-            return;
-        }
-
-        LoadLanguage();
-        LoadVault();
-
         while (true)
         {
-            Console.WriteLine("\n=== PASSWORD MANAGER ===");
-            Console.WriteLine("1. " + T("Добавить сервис", "Add service"));
-            Console.WriteLine("2. " + T("Получить пароль", "Get password"));
-            Console.WriteLine("3. " + T("Сменить язык", "Change language"));
-            Console.WriteLine("4. " + T("GitHub проект", "GitHub Project"));
-            Console.WriteLine("5. " + T("Выйти", "Exit"));
+            Console.WriteLine("Менеджер паролей / Password Manager");
+            Console.WriteLine("1. " + T("Создать аккаунт", "Create account"));
+            Console.WriteLine("2. " + T("Войти в аккаунт", "Login"));
+            Console.WriteLine("3. " + T("Выход", "Exit"));
             Console.Write(T("Выбор: ", "Choice: "));
 
             string choice = Console.ReadLine() ?? "";
 
-            if (choice == "1") AddService();
-            else if (choice == "2") GetService();
-            else if (choice == "3") ChooseLanguage();
-            else if (choice == "4") ShowGitHubLink();
-            else if (choice == "5") break;
+            if (choice == "1")
+                CreateAccount();
+            else if (choice == "2")
+            {
+                if (Login())
+                {
+                    while (true)
+                    {
+                        Console.WriteLine("\n=== PASSWORD MANAGER ===");
+                        Console.WriteLine("1. " + T("Добавить сервис", "Add service"));
+                        Console.WriteLine("2. " + T("Получить пароль", "Get password"));
+                        Console.WriteLine("3. " + T("Сменить язык", "Change language"));
+                        Console.WriteLine("4. " + T("GitHub проект", "GitHub Project"));
+                        Console.WriteLine("5. " + T("Выход из приложения", "Exit"));
+                        Console.Write(T("Выбор: ", "Choice: "));
+
+                        string subChoice = Console.ReadLine() ?? "";
+
+                        if (subChoice == "1") AddService();
+                        else if (subChoice == "2") GetService();
+                        else if (subChoice == "3") ChooseLanguage();
+                        else if (subChoice == "4") ShowGitHubLink();
+                        else if (subChoice == "5") return;
+                    }
+                }
+            }
+            else if (choice == "3") return;
         }
     }
 }
-
