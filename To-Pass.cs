@@ -267,7 +267,7 @@ class PasswordManager
         Console.Write(T("Введите сервис: ", "Enter service: "));
         string service = Console.ReadLine() ?? "";
 
-        Console.Write(T("Введите длину пароля(Рекамендовано минимум 12 символов для безопасности): ", "Enter password length(A minimum of 12 characters is recommended for security): "));
+        Console.Write(T("Введите длину пароля: ", "Enter password length: "));
         if (!int.TryParse(Console.ReadLine(), out int length) || length < 4)
         {
             Console.WriteLine(T("Некорректная длина!", "Invalid length!"));
@@ -304,9 +304,9 @@ class PasswordManager
         while (true)
         {
             Console.WriteLine("Менеджер паролей / Password Manager");
-            Console.WriteLine("1. " + T("Создать аккаунт", "Create account"));
-            Console.WriteLine("2. " + T("Войти в аккаунт", "Login"));
-            Console.WriteLine("3. " + T("Выход", "Exit"));
+            Console.WriteLine("1. " + T("Create account/Создать аккаунт", "Create account"));
+            Console.WriteLine("2. " + T("Login/Войти в аккаунт", "Login"));
+            Console.WriteLine("3. " + T("Exit/Выход", "Exit"));
             Console.Write(T("Выбор: ", "Choice: "));
 
             string choice = Console.ReadLine() ?? "";
@@ -339,5 +339,8 @@ class PasswordManager
             }
             else if (choice == "3") return;
         }
+    }
+}
+
     }
 }
