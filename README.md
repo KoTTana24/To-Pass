@@ -1,7 +1,7 @@
 # To-Pass
 // It my first project \\\
 
-### To Pass - Password manager
+### To Pass - Console Password Manager
 
 ## Stable work on Linux
 ## Maybe work on Windows
