@@ -8,7 +8,7 @@
 ## Stable work on MacOs 🍎
 
 # To-TEST-Pass a test version of To-Pass he has been not 100% stable
-# To-Pass a full stable version
+# 2Pass a full stable version
 
 ## !If you use unstable version you can damage your To-Pass files
 ## !It is recommended to use the unstable version on another user.
