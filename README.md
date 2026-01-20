@@ -1,4 +1,4 @@
-# To-Pass
+# 2Pass
 // It my first project \\\
 
 ### To Pass - Console Password Manager
