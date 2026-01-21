@@ -17,6 +17,11 @@ class PasswordManager
     static string language = "RU";
     static string currentUser = "";
 
+    // ================= SETTINGS =================
+    static int defaultPasswordLength = 12;
+    static bool defaultUseCyrillic = false;
+    static bool askBeforeShowPassword = true;
+
     // ================= CRYPTO CORE =================
 
     static byte[] GetKey(string key)
@@ -130,9 +135,8 @@ class PasswordManager
 
     static void CreateAccount()
     {
-        Console.WriteLine("\n=== CREATE NEW USER ===");
+        Console.WriteLine("\n=== CREATE USER ===");
         Console.WriteLine("Введите имя пользователя / Enter username:");
-
         string userName = Console.ReadLine() ?? "";
 
         if (string.IsNullOrEmpty(userName))
@@ -186,6 +190,7 @@ class PasswordManager
         {
             currentUser = userName;
             LoadVault();
+            LoadSettings();
             Console.WriteLine($"Вход выполнен: {currentUser}");
             return true;
         }
@@ -199,8 +204,7 @@ class PasswordManager
     static void LoadVault()
     {
         vault.Clear();
-        string userPath = Path.Combine(userFilePath, currentUser);
-        string vaultFile = Path.Combine(userPath, "vault.txt");
+        string vaultFile = Path.Combine(userFilePath, currentUser, "vault.txt");
 
         if (!File.Exists(vaultFile))
             return;
@@ -219,11 +223,9 @@ class PasswordManager
 
     static void SaveVault()
     {
-        string userPath = Path.Combine(userFilePath, currentUser);
-        string vaultFile = Path.Combine(userPath, "vault.txt");
+        string vaultFile = Path.Combine(userFilePath, currentUser, "vault.txt");
 
         StringBuilder data = new StringBuilder();
-
         foreach (var entry in vault)
         {
             data.AppendLine("SERVICE:" + entry.Key);
@@ -233,6 +235,85 @@ class PasswordManager
 
         File.WriteAllText(vaultFile, data.ToString());
     }
+
+    // ================= SETTINGS =================
+
+    static void LoadSettings()
+    {
+        string settingsFile = Path.Combine(userFilePath, currentUser, "settings.cfg");
+
+        if (!File.Exists(settingsFile))
+            return;
+
+        foreach (string line in File.ReadAllLines(settingsFile))
+        {
+            if (line.StartsWith("LENGTH="))
+                int.TryParse(line.Replace("LENGTH=", ""), out defaultPasswordLength);
+            else if (line.StartsWith("CYRILLIC="))
+                defaultUseCyrillic = line.Replace("CYRILLIC=", "") == "1";
+            else if (line.StartsWith("ASKSHOW="))
+                askBeforeShowPassword = line.Replace("ASKSHOW=", "") == "1";
+        }
+    }
+
+    static void SaveSettings()
+    {
+        string settingsFile = Path.Combine(userFilePath, currentUser, "settings.cfg");
+
+        StringBuilder data = new StringBuilder();
+        data.AppendLine("LENGTH=" + defaultPasswordLength);
+        data.AppendLine("CYRILLIC=" + (defaultUseCyrillic ? "1" : "0"));
+        data.AppendLine("ASKSHOW=" + (askBeforeShowPassword ? "1" : "0"));
+
+        File.WriteAllText(settingsFile, data.ToString());
+    }
+
+
+//=========Settings Menu=========
+    static void SettingsMenu()
+{
+    while (true)
+    {
+        Console.WriteLine("\n=== SETTINGS ===");
+        Console.WriteLine($"1. {T("Длина пароля", "Password length")}: {defaultPasswordLength}");
+        Console.WriteLine($"2. {T("Использовать кириллицу", "Use Cyrillic")}: {(defaultUseCyrillic ? "ON" : "OFF")}");
+        Console.WriteLine($"3. {T("Спрашивать перед показом пароля", "Ask before showing password")}: {(askBeforeShowPassword ? "ON" : "OFF")}");
+        Console.WriteLine($"4. {T("Язык", "Language")}: {(language == "RU" ? "Русский" : "English")}");
+        Console.WriteLine("5. " + T("Назад", "Back"));
+        Console.Write(T("Выбор: ", "Choice: "));
+
+        string choice = Console.ReadLine() ?? "";
+
+        if (choice == "1")
+        {
+            Console.Write(T("Введите длину: ", "Enter length: "));
+            if (int.TryParse(Console.ReadLine(), out int len) && len >= 4)
+            {
+                defaultPasswordLength = len;
+                SaveSettings();
+            }
+        }
+        else if (choice == "2")
+        {
+            defaultUseCyrillic = !defaultUseCyrillic;
+            SaveSettings();
+        }
+        else if (choice == "3")
+        {
+            askBeforeShowPassword = !askBeforeShowPassword;
+            SaveSettings();
+        }
+        else if (choice == "4")
+        {
+            ChooseLanguage(); // ← вот тут смена языка
+        }
+        else if (choice == "5")
+        {
+            return;
+        }
+    }
+}
+
 
     // ================= SMART SEARCH =================
 
@@ -268,14 +349,10 @@ class PasswordManager
 
         foreach (var service in vault.Keys)
         {
-            int distance = LevenshteinDistance(
-                input.ToLower(),
-                service.ToLower()
-            );
-
-            if (distance < bestScore)
+            int dist = LevenshteinDistance(input.ToLower(), service.ToLower());
+            if (dist < bestScore)
             {
-                bestScore = distance;
+                bestScore = dist;
                 bestMatch = service;
             }
         }
@@ -289,7 +366,7 @@ class PasswordManager
     {
         string latinChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+<>?";
         string cyrillicChars = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя" +
-                                "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+                               "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
 
         string allChars = useCyrillic ? latinChars + cyrillicChars : latinChars;
 
@@ -302,27 +379,6 @@ class PasswordManager
         return pass.ToString();
     }
 
-    // ================= SHOW PASSWORDS =================
-
-    static void ShowPasswordsList()
-    {
-        if (vault.Count == 0)
-        {
-            Console.WriteLine(T("Список паролей пуст.", "No passwords saved."));
-            return;
-        }
-
-        Console.WriteLine(T("\nСписок всех паролей:", "\nList of all passwords:"));
-
-        foreach (var entry in vault)
-        {
-            string service = entry.Key;
-            string password = DecryptAES(entry.Value, passwordKey);
-
-            Console.WriteLine($"{T("Сервис:", "Service:")} {service} | {T("Пароль:", "Password:")} {password}");
-        }
-    }
-
     // ================= FEATURES =================
 
     static void AddService()
@@ -330,23 +386,38 @@ class PasswordManager
         Console.Write(T("Введите сервис: ", "Enter service: "));
         string service = Console.ReadLine() ?? "";
 
-        Console.Write(T("Введите длину пароля: ", "Enter password length: "));
-        if (!int.TryParse(Console.ReadLine(), out int length) || length < 4)
-        {
-            Console.WriteLine(T("Некорректная длина!", "Invalid length!"));
-            return;
-        }
-
-        Console.Write(T("Использовать кириллицу? (y/n): ", "Use Cyrillic? (y/n): "));
-        string choice = Console.ReadLine()?.ToLower() ?? "n";
-        bool useCyrillic = choice == "y" || choice == "д";
-
-        string password = GeneratePassword(length, useCyrillic);
+        string password = GeneratePassword(defaultPasswordLength, defaultUseCyrillic);
         vault[service] = EncryptAES(password, passwordKey);
         SaveVault();
 
-        Console.WriteLine(T("\nПароль создан и сохранён!", "\nPassword created and saved!"));
-        Console.WriteLine(T("Пароль: ", "Password: ") + password);
+        Console.WriteLine(T("\nПароль создан!", "\nPassword created!"));
+
+        if (askBeforeShowPassword)
+        {
+            Console.Write(T("Показать пароль? (y/n): ", "Show password? (y/n): "));
+            string c = Console.ReadLine()?.ToLower() ?? "n";
+            if (c == "y" || c == "д")
+                Console.WriteLine(T("Пароль: ", "Password: ") + password);
+        }
+        else
+        {
+            Console.WriteLine(T("Пароль: ", "Password: ") + password);
+        }
+    }
+
+    static void ShowPasswordsList()
+    {
+        if (vault.Count == 0)
+        {
+            Console.WriteLine(T("Список пуст.", "List is empty."));
+            return;
+        }
+
+        Console.WriteLine(T("\nВсе сервисы:", "\nAll services:"));
+        foreach (var entry in vault)
+        {
+            Console.WriteLine($"{T("Сервис:", "Service:")} {entry.Key}");
+        }
     }
 
     static void GetService()
@@ -354,27 +425,29 @@ class PasswordManager
         Console.Write(T("Введите сервис: ", "Enter service: "));
         string input = Console.ReadLine() ?? "";
 
-        string? service;
+        string? service = vault.ContainsKey(input)
+            ? input
+            : FindClosestService(input);
 
-        if (vault.ContainsKey(input))
+        if (service == null)
         {
-            service = input;
-        }
-        else
-        {
-            service = FindClosestService(input);
-
-            if (service == null)
-            {
-                Console.WriteLine(T("Сервис не найден!", "Service not found!"));
-                return;
-            }
-
-            Console.WriteLine(T("Найден похожий сервис: ", "Found similar service: ") + service);
+            Console.WriteLine(T("Сервис не найден!", "Service not found!"));
+            return;
         }
 
         string password = DecryptAES(vault[service], passwordKey);
-        Console.WriteLine(T("Пароль: ", "Password: ") + password);
+
+        if (askBeforeShowPassword)
+        {
+            Console.Write(T("Показать пароль? (y/n): ", "Show password? (y/n): "));
+            string c = Console.ReadLine()?.ToLower() ?? "n";
+            if (c == "y" || c == "д")
+                Console.WriteLine(T("Пароль: ", "Password: ") + password);
+        }
+        else
+        {
+            Console.WriteLine(T("Пароль: ", "Password: ") + password);
+        }
     }
 
     // ================= MAIN =================
@@ -393,8 +466,7 @@ class PasswordManager
 
             string choice = Console.ReadLine() ?? "";
 
-            if (choice == "1")
-                CreateAccount();
+            if (choice == "1") CreateAccount();
             else if (choice == "2")
             {
                 if (Login())
@@ -404,18 +476,18 @@ class PasswordManager
                         Console.WriteLine("\n=== 2PASS ===");
                         Console.WriteLine("1. " + T("Добавить сервис", "Add service"));
                         Console.WriteLine("2. " + T("Получить пароль (умный поиск)", "Get password (smart search)"));
-                        Console.WriteLine("3. " + T("Лист паролей", "Password list"));
-                        Console.WriteLine("4. " + T("Сменить язык", "Change language"));
+                        Console.WriteLine("3. " + T("Список сервисов", "Service list"));
+                        Console.WriteLine("4. " + T("Настройки", "Settings"));
                         Console.WriteLine("5. " + T("Выход", "Exit"));
                         Console.Write(T("Выбор: ", "Choice: "));
 
-                        string subChoice = Console.ReadLine() ?? "";
+                        string sub = Console.ReadLine() ?? "";
 
-                        if (subChoice == "1") AddService();
-                        else if (subChoice == "2") GetService();
-                        else if (subChoice == "3") ShowPasswordsList();
-                        else if (subChoice == "4") ChooseLanguage();
-                        else if (subChoice == "5") return;
+                        if (sub == "1") AddService();
+                        else if (sub == "2") GetService();
+                        else if (sub == "3") ShowPasswordsList();
+                        else if (sub == "4") SettingsMenu();
+                        else if (sub == "5") return;
                     }
                 }
             }
@@ -423,3 +495,5 @@ class PasswordManager
         }
     }
 }
+
+
