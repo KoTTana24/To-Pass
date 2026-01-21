@@ -10,8 +10,8 @@
 # To-TEST-Pass a test version of To-Pass he has been not 100% stable
 # 2Pass a full stable version
 
-## !If you use unstable version you can damage your To-Pass files
-## !It is recommended to use the unstable version on another user.
+## !If you use unstable version you can damage your 2Pass files
+
 
 
 # About Accounts 
