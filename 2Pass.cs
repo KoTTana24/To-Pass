@@ -25,7 +25,6 @@ class PasswordManager
         return sha.ComputeHash(Encoding.UTF8.GetBytes(key));
     }
 
-    // AES WITH RANDOM IV (STORED IN FILE)
     static string EncryptAES(string text, string key)
     {
         using Aes aes = Aes.Create();
@@ -156,12 +155,11 @@ class PasswordManager
         string hashed = Hash(pass1);
         string encryptedHash = EncryptAES(hashed, masterKey);
 
-        // Create user folder and save encrypted master password
         string userPath = Path.Combine(userFilePath, userName);
         Directory.CreateDirectory(userPath);
         File.WriteAllText(Path.Combine(userPath, "master.cfg"), encryptedHash);
 
-        Console.WriteLine("Пользователь создан и мастер-пароль сохранён!");
+        Console.WriteLine("Пользователь создан!");
     }
 
     static bool Login()
@@ -188,7 +186,7 @@ class PasswordManager
         {
             currentUser = userName;
             LoadVault();
-            Console.WriteLine($"Вход в аккаунт {currentUser} успешен!");
+            Console.WriteLine($"Вход выполнен: {currentUser}");
             return true;
         }
 
@@ -202,11 +200,8 @@ class PasswordManager
     {
         vault.Clear();
         string userPath = Path.Combine(userFilePath, currentUser);
-
-        if (!Directory.Exists(userPath))
-            return;
-
         string vaultFile = Path.Combine(userPath, "vault.txt");
+
         if (!File.Exists(vaultFile))
             return;
 
@@ -239,6 +234,55 @@ class PasswordManager
         File.WriteAllText(vaultFile, data.ToString());
     }
 
+    // ================= SMART SEARCH =================
+
+    static int LevenshteinDistance(string s, string t)
+    {
+        int[,] dp = new int[s.Length + 1, t.Length + 1];
+
+        for (int i = 0; i <= s.Length; i++)
+            dp[i, 0] = i;
+        for (int j = 0; j <= t.Length; j++)
+            dp[0, j] = j;
+
+        for (int i = 1; i <= s.Length; i++)
+        {
+            for (int j = 1; j <= t.Length; j++)
+            {
+                int cost = s[i - 1] == t[j - 1] ? 0 : 1;
+
+                dp[i, j] = Math.Min(
+                    Math.Min(dp[i - 1, j] + 1, dp[i, j - 1] + 1),
+                    dp[i - 1, j - 1] + cost
+                );
+            }
+        }
+
+        return dp[s.Length, t.Length];
+    }
+
+    static string? FindClosestService(string input)
+    {
+        string? bestMatch = null;
+        int bestScore = int.MaxValue;
+
+        foreach (var service in vault.Keys)
+        {
+            int distance = LevenshteinDistance(
+                input.ToLower(),
+                service.ToLower()
+            );
+
+            if (distance < bestScore)
+            {
+                bestScore = distance;
+                bestMatch = service;
+            }
+        }
+
+        return bestScore <= 3 ? bestMatch : null;
+    }
+
     // ================= PASSWORD =================
 
     static string GeneratePassword(int length, bool useCyrillic)
@@ -258,32 +302,26 @@ class PasswordManager
         return pass.ToString();
     }
 
-    // ================= GITHUB LINK =================
+    // ================= SHOW PASSWORDS =================
 
-    static void ShowGitHubLink()
+    static void ShowPasswordsList()
     {
-        Console.WriteLine("\nGitHub Project: https://github.com/KoTTana24/To-Pass/");
+        if (vault.Count == 0)
+        {
+            Console.WriteLine(T("Список паролей пуст.", "No passwords saved."));
+            return;
+        }
+
+        Console.WriteLine(T("\nСписок всех паролей:", "\nList of all passwords:"));
+
+        foreach (var entry in vault)
+        {
+            string service = entry.Key;
+            string password = DecryptAES(entry.Value, passwordKey);
+
+            Console.WriteLine($"{T("Сервис:", "Service:")} {service} | {T("Пароль:", "Password:")} {password}");
+        }
     }
-
-// ================= SHOW PASSWORDS =================
-
-static void ShowPasswordsList()
-{
-    if (vault.Count == 0)
-    {
-        Console.WriteLine(T("Список паролей пуст.", "No passwords saved."));
-        return;
-    }
-
-    Console.WriteLine(T("\nСписок всех паролей и сервисов:", "\nList of all passwords and services:"));
-    foreach (var entry in vault)
-    {
-        string service = entry.Key;
-        string password = DecryptAES(entry.Value, passwordKey);
-        Console.WriteLine($"{T("Сервис:", "Service:")} {service}, {T("Пароль:", "Password:")} {password}");
-    }
-}
-
 
     // ================= FEATURES =================
 
@@ -292,7 +330,7 @@ static void ShowPasswordsList()
         Console.Write(T("Введите сервис: ", "Enter service: "));
         string service = Console.ReadLine() ?? "";
 
-        Console.Write(T("Введите длину пароля(Рекомендованно использовать минимум 12 символов для безопасности): ", "Enter password length(We recommend using at least 12 characters for security purposes.): "));
+        Console.Write(T("Введите длину пароля: ", "Enter password length: "));
         if (!int.TryParse(Console.ReadLine(), out int length) || length < 4)
         {
             Console.WriteLine(T("Некорректная длина!", "Invalid length!"));
@@ -314,12 +352,25 @@ static void ShowPasswordsList()
     static void GetService()
     {
         Console.Write(T("Введите сервис: ", "Enter service: "));
-        string service = Console.ReadLine() ?? "";
+        string input = Console.ReadLine() ?? "";
 
-        if (!vault.ContainsKey(service))
+        string? service;
+
+        if (vault.ContainsKey(input))
         {
-            Console.WriteLine(T("Сервис не найден!", "Service not found!"));
-            return;
+            service = input;
+        }
+        else
+        {
+            service = FindClosestService(input);
+
+            if (service == null)
+            {
+                Console.WriteLine(T("Сервис не найден!", "Service not found!"));
+                return;
+            }
+
+            Console.WriteLine(T("Найден похожий сервис: ", "Found similar service: ") + service);
         }
 
         string password = DecryptAES(vault[service], passwordKey);
@@ -330,14 +381,13 @@ static void ShowPasswordsList()
 
     static void Main()
     {
-        // Загружаем язык при запуске программы
         LoadLanguage();
 
         while (true)
         {
-            Console.WriteLine("Менеджер паролей / Password Manager");
+            Console.WriteLine("\n=== PASSWORD MANAGER ===");
             Console.WriteLine("1. " + T("Создать аккаунт", "Create account"));
-            Console.WriteLine("2. " + T("Войти в аккаунт", "Login"));
+            Console.WriteLine("2. " + T("Войти", "Login"));
             Console.WriteLine("3. " + T("Выход", "Exit"));
             Console.Write(T("Выбор: ", "Choice: "));
 
@@ -353,11 +403,10 @@ static void ShowPasswordsList()
                     {
                         Console.WriteLine("\n=== 2PASS ===");
                         Console.WriteLine("1. " + T("Добавить сервис", "Add service"));
-                        Console.WriteLine("2. " + T("Получить пароль", "Get password"));
-                        Console.WriteLine("3. " + T("Посмотреть все пароли", "Show all passwords"));
+                        Console.WriteLine("2. " + T("Получить пароль (умный поиск)", "Get password (smart search)"));
+                        Console.WriteLine("3. " + T("Лист паролей", "Password list"));
                         Console.WriteLine("4. " + T("Сменить язык", "Change language"));
-                        Console.WriteLine("5. " + T("GitHub проект", "GitHub Project"));
-                        Console.WriteLine("6. " + T("Выход из приложения", "Exit"));
+                        Console.WriteLine("5. " + T("Выход", "Exit"));
                         Console.Write(T("Выбор: ", "Choice: "));
 
                         string subChoice = Console.ReadLine() ?? "";
@@ -366,8 +415,7 @@ static void ShowPasswordsList()
                         else if (subChoice == "2") GetService();
                         else if (subChoice == "3") ShowPasswordsList();
                         else if (subChoice == "4") ChooseLanguage();
-                        else if (subChoice == "5") ShowGitHubLink();
-                        else if (subChoice == "6") return;
+                        else if (subChoice == "5") return;
                     }
                 }
             }
