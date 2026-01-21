@@ -31,15 +31,19 @@
 ## Accounts are stored in the users directory at the path 
 ## users/‘YOUR_ACCOUNT_NAME’
 
-## Master passwords and passwords for services are stored at the path
+## Master passwords, passwords for services and user settings are stored at the path
 ## users/‘YOUR_ACCOUNT_NAME’/master.cfg
-## and
+
 ## users/‘YOUR_ACCOUNT_NAME’/valut.txt
+
+## users/'YOUR_ACCOUNT_NAME'/seting.cfg
+
 
 ## File, What's in it
 ## master.cfg  -   Encrypted master password hash
 ## vault.txt   -  Encrypted service passwords
 ## config.txt  -   Selected interface language
+## settings.cfg - Settings
 
 ## The program has a smart search feature.
 
@@ -53,15 +57,18 @@
 ## Аккаунты хранятся в директории users по пути 
 ## users/'YOUR_ACCOUNT_NAME'
 
-## Мастер пароль и пароли с сервисами хранятся по пути
+## Мастер пароль, пароли с сервисами и настройки хранятся по пути
 ## users/'YOUR_ACCOUNT_NAME'/master.cfg
-## и
+
 ## users/'YOUR_ACCOUNT_NAME'/valut.txt
+
+## users/'YOUR_ACCOUNT_NAME'/seting.cfg
 
 ## Файл, Что в нём
 ## master.cfg	- Зашифрованный хэш мастер-пароля
 ## vault.txt - Зашифрованные пароли сервисов
 ## config.txt	- Выбранный язык интерфейса
+## settings.cfg - Настройки
 
 ## В программе есть умный поиск
 
