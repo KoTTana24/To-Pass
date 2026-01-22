@@ -268,52 +268,49 @@ class PasswordManager
         File.WriteAllText(settingsFile, data.ToString());
     }
 
-
-//=========Settings Menu=========
     static void SettingsMenu()
-{
-    while (true)
     {
-        Console.WriteLine("\n=== SETTINGS ===");
-        Console.WriteLine($"1. {T("Длина пароля", "Password length")}: {defaultPasswordLength}");
-        Console.WriteLine($"2. {T("Использовать кириллицу", "Use Cyrillic")}: {(defaultUseCyrillic ? "ON" : "OFF")}");
-        Console.WriteLine($"3. {T("Спрашивать перед показом пароля", "Ask before showing password")}: {(askBeforeShowPassword ? "ON" : "OFF")}");
-        Console.WriteLine($"4. {T("Язык", "Language")}: {(language == "RU" ? "Русский" : "English")}");
-        Console.WriteLine("5. " + T("Назад", "Back"));
-        Console.Write(T("Выбор: ", "Choice: "));
-
-        string choice = Console.ReadLine() ?? "";
-
-        if (choice == "1")
+        while (true)
         {
-            Console.Write(T("Введите длину: ", "Enter length: "));
-            if (int.TryParse(Console.ReadLine(), out int len) && len >= 4)
+            Console.WriteLine("\n=== SETTINGS ===");
+            Console.WriteLine($"1. {T("Длина пароля", "Password length")}: {defaultPasswordLength}");
+            Console.WriteLine($"2. {T("Использовать кириллицу", "Use Cyrillic")}: {(defaultUseCyrillic ? "ON" : "OFF")}");
+            Console.WriteLine($"3. {T("Спрашивать перед показом пароля", "Ask before showing password")}: {(askBeforeShowPassword ? "ON" : "OFF")}");
+            Console.WriteLine($"4. {T("Язык", "Language")}: {(language == "RU" ? "Русский" : "English")}");
+            Console.WriteLine("5. " + T("Назад", "Back"));
+            Console.Write(T("Выбор: ", "Choice: "));
+
+            string choice = Console.ReadLine() ?? "";
+
+            if (choice == "1")
             {
-                defaultPasswordLength = len;
+                Console.Write(T("Введите длину: ", "Enter length: "));
+                if (int.TryParse(Console.ReadLine(), out int len) && len >= 4)
+                {
+                    defaultPasswordLength = len;
+                    SaveSettings();
+                }
+            }
+            else if (choice == "2")
+            {
+                defaultUseCyrillic = !defaultUseCyrillic;
                 SaveSettings();
             }
-        }
-        else if (choice == "2")
-        {
-            defaultUseCyrillic = !defaultUseCyrillic;
-            SaveSettings();
-        }
-        else if (choice == "3")
-        {
-            askBeforeShowPassword = !askBeforeShowPassword;
-            SaveSettings();
-        }
-        else if (choice == "4")
-        {
-            ChooseLanguage(); // ← вот тут смена языка
-        }
-        else if (choice == "5")
-        {
-            return;
+            else if (choice == "3")
+            {
+                askBeforeShowPassword = !askBeforeShowPassword;
+                SaveSettings();
+            }
+            else if (choice == "4")
+            {
+                ChooseLanguage(); // ← вот тут смена языка
+            }
+            else if (choice == "5")
+            {
+                return;
+            }
         }
     }
-}
-
 
     // ================= SMART SEARCH =================
 
@@ -466,6 +463,13 @@ class PasswordManager
 
             string choice = Console.ReadLine() ?? "";
 
+            // Проверка на команду !clear - очищаем экран
+            if (choice.Trim().ToLower() == "!clear")
+            {
+                Console.Clear();
+                continue;
+            }
+
             if (choice == "1") CreateAccount();
             else if (choice == "2")
             {
@@ -483,6 +487,13 @@ class PasswordManager
 
                         string sub = Console.ReadLine() ?? "";
 
+                        // Проверка на команду !clear - очищаем экран
+                        if (sub.Trim().ToLower() == "!clear")
+                        {
+                            Console.Clear();
+                            continue;
+                        }
+
                         if (sub == "1") AddService();
                         else if (sub == "2") GetService();
                         else if (sub == "3") ShowPasswordsList();
@@ -495,5 +506,3 @@ class PasswordManager
         }
     }
 }
-
-
